@@ -4,14 +4,17 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Carte Interactive de France</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-      background: #f3f4f6;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #0f172a;
       display: flex;
       flex-direction: column;
       height: 100vh;
@@ -20,126 +23,290 @@
 
     /* ── Header ── */
     #header {
-      background: #ffffff;
-      border-bottom: 1px solid #e5e7eb;
-      padding: 14px 24px;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+      border-bottom: 1px solid rgba(99,102,241,.25);
+      padding: 0 28px;
       display: flex;
-      align-items: baseline;
-      gap: 14px;
+      align-items: center;
+      justify-content: space-between;
+      height: 62px;
       flex-shrink: 0;
-      box-shadow: 0 1px 4px rgba(0,0,0,.06);
+      box-shadow: 0 4px 24px rgba(0,0,0,.45);
+      position: relative;
+      z-index: 1000;
+    }
+    #header::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(99,102,241,.6), transparent);
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .header-icon {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+      box-shadow: 0 0 16px rgba(99,102,241,.5);
+      flex-shrink: 0;
     }
     #header h1 {
-      font-size: 1.25rem;
+      font-size: 1.05rem;
       font-weight: 700;
-      color: #111827;
+      color: #f1f5f9;
       letter-spacing: -0.3px;
     }
     #header p {
-      font-size: 0.85rem;
-      color: #6b7280;
+      font-size: 0.72rem;
+      color: #94a3b8;
       font-weight: 400;
+      margin-top: 1px;
     }
 
-    /* ── Map container ── */
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    /* Selection badge */
+    #sel-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(239,68,68,.12);
+      border: 1px solid rgba(239,68,68,.35);
+      border-radius: 10px;
+      padding: 6px 14px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: #fca5a5;
+      transition: all .25s ease;
+      opacity: 0;
+      transform: scale(.92);
+    }
+    #sel-badge.visible {
+      opacity: 1;
+      transform: scale(1);
+    }
+    #sel-badge .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #ef4444;
+      box-shadow: 0 0 6px #ef4444;
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+      0%,100% { box-shadow: 0 0 4px #ef4444; }
+      50%      { box-shadow: 0 0 10px #ef4444, 0 0 20px rgba(239,68,68,.4); }
+    }
+
+    /* Reset button */
+    #btn-reset {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(99,102,241,.15);
+      border: 1px solid rgba(99,102,241,.35);
+      border-radius: 8px;
+      padding: 6px 14px;
+      font-size: 0.76rem;
+      font-weight: 600;
+      color: #a5b4fc;
+      cursor: pointer;
+      transition: all .2s ease;
+      opacity: 0;
+      pointer-events: none;
+    }
+    #btn-reset.visible {
+      opacity: 1;
+      pointer-events: all;
+    }
+    #btn-reset:hover {
+      background: rgba(99,102,241,.28);
+      border-color: rgba(99,102,241,.6);
+      color: #c7d2fe;
+    }
+    #btn-reset:active { transform: scale(.97); }
+
+    /* ── Map ── */
     #map {
       flex: 1;
       min-height: 0;
     }
 
-    /* ── Legend ── */
-    .legend {
-      background: #ffffff;
-      border: 1px solid #e5e7eb;
-      border-radius: 8px;
-      padding: 10px 14px;
-      box-shadow: 0 2px 8px rgba(0,0,0,.10);
-      font-size: 0.78rem;
-      color: #374151;
-      line-height: 1.7;
-      min-width: 210px;
+    /* Leaflet overrides */
+    .leaflet-control-zoom {
+      border: none !important;
+      box-shadow: 0 4px 20px rgba(0,0,0,.3) !important;
     }
-    .legend-title {
-      font-weight: 700;
-      font-size: 0.82rem;
-      color: #111827;
-      margin-bottom: 6px;
-      border-bottom: 1px solid #f3f4f6;
-      padding-bottom: 4px;
+    .leaflet-control-zoom a {
+      background: #1e293b !important;
+      color: #94a3b8 !important;
+      border-color: rgba(99,102,241,.25) !important;
+      width: 30px !important;
+      height: 30px !important;
+      line-height: 30px !important;
+      font-size: 16px !important;
+      transition: all .15s ease !important;
     }
-    .legend-row {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .legend-dot {
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-      flex-shrink: 0;
-      border: 1.5px solid rgba(0,0,0,.18);
+    .leaflet-control-zoom a:hover {
+      background: #334155 !important;
+      color: #e2e8f0 !important;
     }
 
-    /* ── City tooltips (labels) ── */
+    /* ── City labels ── */
     .city-label {
       background: transparent !important;
       border: none !important;
       box-shadow: none !important;
-      font-size: 0.67rem;
-      font-weight: 600;
+      font-size: 0.62rem;
+      font-weight: 700;
       color: #1e3a8a;
       white-space: nowrap;
       pointer-events: none;
       padding: 0 !important;
+      text-shadow: 0 1px 3px rgba(255,255,255,.9), 0 0 6px rgba(255,255,255,.7);
+      letter-spacing: 0.3px;
+    }
+    .city-label.selected-label {
+      color: #991b1b !important;
+      text-shadow: 0 1px 3px rgba(255,255,255,.9), 0 0 8px rgba(239,68,68,.4) !important;
     }
     .city-label::before { display: none !important; }
 
     /* ── Popup ── */
     .leaflet-popup-content-wrapper {
-      border-radius: 8px;
-      box-shadow: 0 4px 16px rgba(0,0,0,.15);
-      border: 1px solid #e5e7eb;
+      background: #1e293b !important;
+      border-radius: 12px !important;
+      box-shadow: 0 8px 32px rgba(0,0,0,.5), 0 0 0 1px rgba(99,102,241,.2) !important;
+      border: none !important;
+      overflow: hidden !important;
     }
+    .leaflet-popup-tip-container { display: none !important; }
     .leaflet-popup-content {
-      margin: 10px 14px;
+      margin: 14px 16px !important;
     }
-    .popup-name {
+    .leaflet-popup-close-button {
+      color: #64748b !important;
+      font-size: 18px !important;
+      top: 8px !important;
+      right: 10px !important;
+    }
+    .leaflet-popup-close-button:hover { color: #94a3b8 !important; }
+
+    .popup-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.65rem;
       font-weight: 700;
-      font-size: 0.95rem;
-      color: #111827;
+      border-radius: 5px;
+      padding: 2px 8px;
+      margin-bottom: 8px;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+    .popup-badge.medium   { background: rgba(99,102,241,.2); color: #a5b4fc; border: 1px solid rgba(99,102,241,.3); }
+    .popup-badge.large    { background: rgba(100,116,139,.2); color: #94a3b8; border: 1px solid rgba(100,116,139,.3); }
+    .popup-badge.selected { background: rgba(239,68,68,.2); color: #fca5a5; border: 1px solid rgba(239,68,68,.3); }
+    .popup-name {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #f1f5f9;
+      line-height: 1.2;
     }
     .popup-pop {
-      font-size: 0.8rem;
-      color: #6b7280;
-      margin-top: 2px;
-    }
-    .popup-type {
-      display: inline-block;
-      font-size: 0.7rem;
-      font-weight: 600;
-      border-radius: 4px;
-      padding: 1px 6px;
+      font-size: 0.75rem;
+      color: #64748b;
       margin-top: 5px;
     }
-    .popup-type.medium   { background: #dbeafe; color: #1d4ed8; }
-    .popup-type.large    { background: #f3f4f6; color: #374151; }
-    .popup-type.selected { background: #fee2e2; color: #b91c1c; }
+    .popup-pop strong { color: #94a3b8; }
+    .popup-hint {
+      font-size: 0.68rem;
+      color: #475569;
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid rgba(255,255,255,.06);
+    }
+
+    /* ── Legend ── */
+    .legend {
+      background: rgba(15,23,42,.88) !important;
+      border: 1px solid rgba(99,102,241,.2) !important;
+      border-radius: 12px !important;
+      padding: 14px 16px !important;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 8px 32px rgba(0,0,0,.4) !important;
+      min-width: 220px;
+    }
+    .legend-title {
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: #64748b;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+    .legend-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 4px 0;
+      font-size: 0.75rem;
+      color: #94a3b8;
+    }
+    .legend-dot {
+      width: 11px; height: 11px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .legend-sep {
+      height: 1px;
+      background: rgba(255,255,255,.06);
+      margin: 6px 0;
+    }
+    .legend-tip {
+      font-size: 0.65rem;
+      color: #475569;
+      margin-top: 8px;
+      line-height: 1.5;
+    }
   </style>
 </head>
 <body>
 
 <div id="header">
-  <h1>Carte Interactive de France</h1>
-  <p>Villes moyennes (20&nbsp;000 – 100&nbsp;000 hab) &amp; grandes villes (&gt;&nbsp;100&nbsp;000 hab)</p>
+  <div class="header-left">
+    <div class="header-icon">🗺</div>
+    <div>
+      <h1>Carte Interactive de France</h1>
+      <p>Villes moyennes (20 000–100 000 hab) · Cliquez pour sélectionner</p>
+    </div>
+  </div>
+  <div class="header-right">
+    <div id="sel-badge">
+      <span class="dot"></span>
+      <span id="sel-count">0</span> ville(s) sélectionnée(s)
+    </div>
+    <button id="btn-reset" onclick="clearAll()">✕ Tout désélectionner</button>
+  </div>
 </div>
 <div id="map"></div>
 
 <script>
-/* ══════════════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════════
    CITY DATA
-   cat:"large"  → population > 100 000  (gray markers, no label)
-   cat:"medium" → population 20 000–100 000 (blue markers, label)
-══════════════════════════════════════════════════════════════ */
+   cat:"large"  → population > 100 000  (gray, no label)
+   cat:"medium" → population 20 000–100 000 (blue, label)
+═══════════════════════════════════════════════════════════ */
 const CITIES_RAW = [
   // ── GRANDES VILLES (> 100 000 hab) ─────────────────────────
   { name:"Paris",             lat:48.8566, lng: 2.3522, pop:2161000, cat:"large" },
@@ -182,7 +349,7 @@ const CITIES_RAW = [
   { name:"Montreuil",         lat:48.8630, lng: 2.4436, pop: 107717, cat:"large" },
   { name:"Saint-Denis",       lat:48.9362, lng: 2.3574, pop: 111103, cat:"large" },
 
-  // ── VILLES MOYENNES (20 000 – 100 000 hab) ─────────────────
+  // ── VILLES MOYENNES (20 000–100 000 hab) ────────────────────
   { name:"Avignon",               lat:43.9493, lng: 4.8055, pop: 93642, cat:"medium" },
   { name:"Nanterre",              lat:48.8924, lng: 2.2071, pop: 93521, cat:"medium" },
   { name:"Vitry-sur-Seine",       lat:48.7875, lng: 2.3928, pop: 93000, cat:"medium" },
@@ -307,25 +474,27 @@ const CITIES_RAW = [
   { name:"Chambéry",              lat:45.5646, lng: 5.9178, pop: 58584, cat:"medium" },
 ];
 
-/* deduplicate by name */
-const seenNames = new Set();
+/* deduplicate */
+const seen = new Set();
 const CITIES = CITIES_RAW.filter(c => {
-  if (seenNames.has(c.name)) return false;
-  seenNames.add(c.name);
-  return true;
+  if (seen.has(c.name)) return false;
+  seen.add(c.name); return true;
 });
 
 /* ═══════════════════════════════════════════════════════════
-   COLOUR PALETTE
+   COLOURS
 ═══════════════════════════════════════════════════════════ */
-const COLOR = {
-  medium:   '#2563eb',
-  large:    '#9ca3af',
-  selected: '#ef4444',
+const C = {
+  medium:         '#3b82f6',
+  mediumBorder:   '#1d4ed8',
+  large:          '#64748b',
+  largeBorder:    '#475569',
+  selected:       '#ef4444',
+  selectedBorder: '#991b1b',
 };
 
 /* ═══════════════════════════════════════════════════════════
-   MAP INITIALISATION
+   MAP
 ═══════════════════════════════════════════════════════════ */
 const map = L.map('map', {
   center: [46.5, 2.5],
@@ -333,83 +502,97 @@ const map = L.map('map', {
   minZoom: 5,
   maxZoom: 14,
   zoomControl: true,
+  zoomAnimation: true,
+  fadeAnimation: true,
 });
 
 L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-  attribution:
-    '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors ' +
-    '&copy; <a href="https://carto.com/attributions">CARTO</a>',
+  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
   subdomains: 'abcd',
   maxZoom: 20,
 }).addTo(map);
 
-/* ═══════════════════════════════════════════════════════════
-   DEPARTEMENT BOUNDARIES (GeoJSON fetch)
-═══════════════════════════════════════════════════════════ */
+/* Departement boundaries */
 fetch('https://raw.githubusercontent.com/gregoiredavid/france-geojson/master/departements-version-simplifiee.geojson')
   .then(r => r.json())
   .then(data => {
     L.geoJSON(data, {
-      style: {
-        color: '#374151',
-        weight: 1,
-        opacity: 0.55,
-        fillOpacity: 0,
-      },
+      style: { color: '#374151', weight: 0.9, opacity: 0.5, fillOpacity: 0 },
       interactive: false,
     }).addTo(map);
   })
-  .catch(err => console.warn('Departement boundaries unavailable:', err));
+  .catch(() => {});
 
 /* ═══════════════════════════════════════════════════════════
-   MARKER HELPERS
+   MULTI-SELECTION STATE
+═══════════════════════════════════════════════════════════ */
+const selectedSet = new Map(); // marker -> city
+
+function updateUI() {
+  const n = selectedSet.size;
+  const badge  = document.getElementById('sel-badge');
+  const btn    = document.getElementById('btn-reset');
+  const count  = document.getElementById('sel-count');
+  count.textContent = n;
+  badge.classList.toggle('visible', n > 0);
+  btn.classList.toggle('visible', n > 0);
+}
+
+function clearAll() {
+  selectedSet.forEach((city, marker) => {
+    marker.setStyle(baseStyle(city));
+    updateLabel(marker, city, false);
+    marker.setPopupContent(popupHTML(city, false));
+  });
+  selectedSet.clear();
+  map.closePopup();
+  updateUI();
+}
+
+/* ═══════════════════════════════════════════════════════════
+   HELPERS
 ═══════════════════════════════════════════════════════════ */
 function baseStyle(city) {
   return city.cat === 'large'
-    ? { radius: 8, fillColor: COLOR.large,  fillOpacity: 0.70, weight: 1.5, color: '#6b7280' }
-    : { radius: 6, fillColor: COLOR.medium, fillOpacity: 0.85, weight: 1.5, color: '#1e40af' };
+    ? { radius: 7, fillColor: C.large,  fillOpacity: 0.65, weight: 1.5, color: C.largeBorder,  interactive: true }
+    : { radius: 6, fillColor: C.medium, fillOpacity: 0.88, weight: 1.5, color: C.mediumBorder, interactive: true };
 }
 
-function selectedStyle() {
-  return { fillColor: COLOR.selected, fillOpacity: 0.95, color: '#991b1b', weight: 2 };
+function selStyle() {
+  return { fillColor: C.selected, fillOpacity: 0.95, color: C.selectedBorder, weight: 2.5, radius: 8 };
 }
 
-function formatPop(n) {
-  return n.toLocaleString('fr-FR') + ' hab.';
+function formatPop(n) { return n.toLocaleString('fr-FR') + ' hab.'; }
+
+function popupHTML(city, isSel) {
+  const badge = isSel
+    ? `<span class="popup-badge selected">● Sélectionnée</span>`
+    : city.cat === 'large'
+      ? `<span class="popup-badge large">Grande ville</span>`
+      : `<span class="popup-badge medium">Ville moyenne</span>`;
+  return `${badge}
+    <div class="popup-name">${city.name}</div>
+    <div class="popup-pop">Population : <strong>${formatPop(city.pop)}</strong></div>
+    <div class="popup-hint">${isSel ? 'Cliquer à nouveau pour désélectionner' : 'Cliquer pour sélectionner'}</div>`;
 }
 
-function popupHTML(city, selected) {
-  const cls   = selected ? 'selected' : city.cat;
-  const label = selected ? 'Sélectionnée' : (city.cat === 'large' ? 'Grande ville' : 'Ville moyenne');
-  return `<div class="popup-name">${city.name}</div>` +
-         `<div class="popup-pop">Population : <strong>${formatPop(city.pop)}</strong></div>` +
-         `<span class="popup-type ${cls}">${label}</span>`;
+function updateLabel(marker, city, isSel) {
+  if (city.cat !== 'medium') return;
+  const tt = marker.getTooltip();
+  if (!tt) return;
+  const el = tt.getElement();
+  if (!el) return;
+  el.classList.toggle('selected-label', isSel);
 }
 
 /* ═══════════════════════════════════════════════════════════
    BUILD MARKERS
 ═══════════════════════════════════════════════════════════ */
-let activeMarker = null;
-let activeCity   = null;
-
-function deselect() {
-  if (activeMarker) {
-    activeMarker.setStyle(baseStyle(activeCity));
-    activeMarker.setPopupContent(popupHTML(activeCity, false));
-    activeMarker = null;
-    activeCity   = null;
-  }
-}
-
-const allMarkerData = []; // { city, marker }
+const allMarkerData = [];
 
 CITIES.forEach(city => {
-  const marker = L.circleMarker([city.lat, city.lng], {
-    ...baseStyle(city),
-    interactive: true,
-  });
+  const marker = L.circleMarker([city.lat, city.lng], baseStyle(city));
 
-  /* Permanent label — medium cities only */
   if (city.cat === 'medium') {
     marker.bindTooltip(city.name, {
       permanent: true,
@@ -420,38 +603,43 @@ CITIES.forEach(city => {
     });
   }
 
-  /* Popup */
   marker.bindPopup(popupHTML(city, false), {
-    closeButton: true,
-    autoClose: true,
+    closeButton: false,
+    autoClose: false,
+    closeOnClick: false,
+    maxWidth: 220,
   });
 
   marker.on('click', function (e) {
     L.DomEvent.stopPropagation(e);
 
-    if (activeMarker === marker) {
-      deselect();
+    if (selectedSet.has(marker)) {
+      /* Deselect */
+      selectedSet.delete(marker);
+      marker.setStyle(baseStyle(city));
+      updateLabel(marker, city, false);
+      marker.setPopupContent(popupHTML(city, false));
       marker.closePopup();
-      return;
+    } else {
+      /* Select */
+      selectedSet.set(marker, city);
+      marker.setStyle({ ...baseStyle(city), ...selStyle() });
+      updateLabel(marker, city, true);
+      marker.setPopupContent(popupHTML(city, true));
+      marker.openPopup();
     }
-
-    deselect();
-    activeMarker = marker;
-    activeCity   = city;
-    marker.setStyle({ ...baseStyle(city), ...selectedStyle() });
-    marker.setPopupContent(popupHTML(city, true));
-    marker.openPopup();
+    updateUI();
   });
 
   marker.addTo(map);
   allMarkerData.push({ city, marker });
 });
 
-/* Click on map background resets selection */
-map.on('click', deselect);
+/* Clicking map background closes popups but keeps selections */
+map.on('click', () => map.closePopup());
 
 /* ═══════════════════════════════════════════════════════════
-   LABEL VISIBILITY  (hide medium labels at low zoom)
+   LABEL VISIBILITY ON ZOOM
 ═══════════════════════════════════════════════════════════ */
 function syncLabels() {
   const z = map.getZoom();
@@ -460,8 +648,7 @@ function syncLabels() {
     const tt = marker.getTooltip();
     if (!tt) return;
     const el = tt.getElement();
-    if (!el) return;
-    el.style.display = (z >= 7) ? '' : 'none';
+    if (el) el.style.display = (z >= 7) ? '' : 'none';
   });
 }
 map.on('zoomend', syncLabels);
@@ -472,14 +659,26 @@ map.whenReady(syncLabels);
 ═══════════════════════════════════════════════════════════ */
 const legend = L.control({ position: 'bottomright' });
 legend.onAdd = function () {
-  const div = L.DomUtil.create('div', 'legend');
-  div.innerHTML =
-    '<div class="legend-title">Légende</div>' +
-    '<div class="legend-row"><span class="legend-dot" style="background:' + COLOR.medium + ';border-color:#1e40af;"></span><span>Ville moyenne (20 000–100 000 hab)</span></div>' +
-    '<div class="legend-row"><span class="legend-dot" style="background:' + COLOR.large  + ';border-color:#6b7280;"></span><span>Grande ville (&gt; 100 000 hab)</span></div>' +
-    '<div class="legend-row"><span class="legend-dot" style="background:' + COLOR.selected + ';border-color:#991b1b;"></span><span>Ville sélectionnée</span></div>';
-  L.DomEvent.disableClickPropagation(div);
-  return div;
+  const d = L.DomUtil.create('div', 'legend');
+  d.innerHTML = `
+    <div class="legend-title">Légende</div>
+    <div class="legend-row">
+      <span class="legend-dot" style="background:${C.medium};box-shadow:0 0 6px rgba(59,130,246,.5)"></span>
+      Ville moyenne (20 000–100 000 hab)
+    </div>
+    <div class="legend-row">
+      <span class="legend-dot" style="background:${C.large}"></span>
+      Grande ville (&gt; 100 000 hab)
+    </div>
+    <div class="legend-sep"></div>
+    <div class="legend-row">
+      <span class="legend-dot" style="background:${C.selected};box-shadow:0 0 6px rgba(239,68,68,.6)"></span>
+      Ville(s) sélectionnée(s)
+    </div>
+    <div class="legend-tip">Cliquer sur plusieurs villes<br>pour les sélectionner simultanément</div>
+  `;
+  L.DomEvent.disableClickPropagation(d);
+  return d;
 };
 legend.addTo(map);
 </script>
