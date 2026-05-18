@@ -10,7 +10,7 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
       background: #f3f4f6;
       display: flex;
       flex-direction: column;
@@ -20,24 +20,23 @@
 
     /* ── Header ── */
     #header {
-      flex-shrink: 0;
       background: #ffffff;
       border-bottom: 1px solid #e5e7eb;
       padding: 14px 24px;
       display: flex;
       align-items: baseline;
       gap: 14px;
+      flex-shrink: 0;
       box-shadow: 0 1px 4px rgba(0,0,0,.06);
-      z-index: 1000;
     }
     #header h1 {
       font-size: 1.25rem;
       font-weight: 700;
       color: #111827;
-      letter-spacing: -.3px;
+      letter-spacing: -0.3px;
     }
     #header p {
-      font-size: .85rem;
+      font-size: 0.85rem;
       color: #6b7280;
       font-weight: 400;
     }
@@ -45,273 +44,289 @@
     /* ── Map container ── */
     #map {
       flex: 1;
-      width: 100%;
+      min-height: 0;
     }
 
     /* ── Legend ── */
     .legend {
-      background: rgba(255,255,255,.95);
+      background: #ffffff;
       border: 1px solid #e5e7eb;
-      border-radius: 10px;
-      padding: 12px 16px;
+      border-radius: 8px;
+      padding: 10px 14px;
       box-shadow: 0 2px 8px rgba(0,0,0,.10);
-      font-size: .82rem;
+      font-size: 0.78rem;
       color: #374151;
-      min-width: 195px;
-      backdrop-filter: blur(4px);
+      line-height: 1.7;
+      min-width: 210px;
     }
-    .legend h4 {
-      font-size: .78rem;
+    .legend-title {
       font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: .06em;
-      color: #6b7280;
-      margin-bottom: 9px;
+      font-size: 0.82rem;
+      color: #111827;
+      margin-bottom: 6px;
+      border-bottom: 1px solid #f3f4f6;
+      padding-bottom: 4px;
     }
-    .legend-item {
+    .legend-row {
       display: flex;
       align-items: center;
-      gap: 9px;
-      margin-bottom: 7px;
+      gap: 8px;
     }
-    .legend-item:last-child { margin-bottom: 0; }
     .legend-dot {
-      width: 13px;
-      height: 13px;
+      width: 12px;
+      height: 12px;
       border-radius: 50%;
       flex-shrink: 0;
-      border: 1.5px solid rgba(0,0,0,.15);
+      border: 1.5px solid rgba(0,0,0,.18);
     }
-    .dot-medium  { background: #2563eb; }
-    .dot-large   { background: #9ca3af; }
-    .dot-selected{ background: #ef4444; }
 
-    /* ── Popup tweaks ── */
+    /* ── City tooltips (labels) ── */
+    .city-label {
+      background: transparent !important;
+      border: none !important;
+      box-shadow: none !important;
+      font-size: 0.67rem;
+      font-weight: 600;
+      color: #1e3a8a;
+      white-space: nowrap;
+      pointer-events: none;
+      padding: 0 !important;
+    }
+    .city-label::before { display: none !important; }
+
+    /* ── Popup ── */
     .leaflet-popup-content-wrapper {
-      border-radius: 10px;
-      box-shadow: 0 4px 14px rgba(0,0,0,.15);
+      border-radius: 8px;
+      box-shadow: 0 4px 16px rgba(0,0,0,.15);
       border: 1px solid #e5e7eb;
     }
     .leaflet-popup-content {
       margin: 10px 14px;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     }
     .popup-name {
-      font-size: .95rem;
       font-weight: 700;
+      font-size: 0.95rem;
       color: #111827;
     }
     .popup-pop {
-      font-size: .82rem;
+      font-size: 0.8rem;
       color: #6b7280;
-      margin-top: 3px;
+      margin-top: 2px;
     }
-
-    /* ── Tooltip (city labels) ── */
-    .leaflet-tooltip.city-label {
-      background: transparent;
-      border: none;
-      box-shadow: none;
-      padding: 0;
-      font-size: .72rem;
+    .popup-type {
+      display: inline-block;
+      font-size: 0.7rem;
       font-weight: 600;
-      color: #1d4ed8;
-      white-space: nowrap;
-      pointer-events: none;
-      text-shadow: 0 1px 3px #fff, 0 -1px 3px #fff, 1px 0 3px #fff, -1px 0 3px #fff;
+      border-radius: 4px;
+      padding: 1px 6px;
+      margin-top: 5px;
     }
-    .leaflet-tooltip.city-label::before { display: none; }
-
-    /* Department boundary GeoJSON layer */
-    .dept-boundary {
-      transition: opacity .2s;
-    }
+    .popup-type.medium   { background: #dbeafe; color: #1d4ed8; }
+    .popup-type.large    { background: #f3f4f6; color: #374151; }
+    .popup-type.selected { background: #fee2e2; color: #b91c1c; }
   </style>
 </head>
 <body>
 
 <div id="header">
   <h1>Carte Interactive de France</h1>
-  <p>Villes moyennes (20 000 – 100 000 hab)</p>
+  <p>Villes moyennes (20&nbsp;000 – 100&nbsp;000 hab) &amp; grandes villes (&gt;&nbsp;100&nbsp;000 hab)</p>
 </div>
-
 <div id="map"></div>
 
 <script>
-// ─────────────────────────────────────────────
-//  City dataset
-// ─────────────────────────────────────────────
-const CITIES = [
-  // ── LARGE cities (>100 000 hab) ──────────────────────────────────────────
-  { name: "Paris",               lat: 48.8566,  lng:  2.3522,  pop: 2161000 },
-  { name: "Marseille",           lat: 43.2965,  lng:  5.3698,  pop: 861635  },
-  { name: "Lyon",                lat: 45.7640,  lng:  4.8357,  pop: 513275  },
-  { name: "Toulouse",            lat: 43.6047,  lng:  1.4442,  pop: 471941  },
-  { name: "Nice",                lat: 43.7102,  lng:  7.2620,  pop: 340017  },
-  { name: "Nantes",              lat: 47.2184,  lng: -1.5536,  pop: 303382  },
-  { name: "Strasbourg",          lat: 48.5734,  lng:  7.7521,  pop: 280966  },
-  { name: "Montpellier",         lat: 43.6108,  lng:  3.8767,  pop: 277639  },
-  { name: "Bordeaux",            lat: 44.8378,  lng: -0.5792,  pop: 252040  },
-  { name: "Lille",               lat: 50.6292,  lng:  3.0573,  pop: 232787  },
-  { name: "Rennes",              lat: 48.1173,  lng: -1.6778,  pop: 211373  },
-  { name: "Reims",               lat: 49.2583,  lng:  4.0317,  pop: 182211  },
-  { name: "Le Havre",            lat: 49.4944,  lng:  0.1079,  pop: 170147  },
-  { name: "Saint-Étienne",       lat: 45.4397,  lng:  4.3872,  pop: 171522  },
-  { name: "Toulon",              lat: 43.1242,  lng:  5.9280,  pop: 169634  },
-  { name: "Grenoble",            lat: 45.1885,  lng:  5.7245,  pop: 158180  },
-  { name: "Dijon",               lat: 47.3220,  lng:  5.0415,  pop: 155090  },
-  { name: "Angers",              lat: 47.4784,  lng: -0.5632,  pop: 151229  },
-  { name: "Nîmes",               lat: 43.8367,  lng:  4.3601,  pop: 148561  },
-  { name: "Villeurbanne",        lat: 45.7719,  lng:  4.8902,  pop: 147712  },
-  { name: "Le Mans",             lat: 47.9960,  lng:  0.1966,  pop: 143240  },
-  { name: "Aix-en-Provence",     lat: 43.5297,  lng:  5.4474,  pop: 141438  },
-  { name: "Clermont-Ferrand",    lat: 45.7772,  lng:  3.0870,  pop: 141569  },
-  { name: "Brest",               lat: 48.3905,  lng: -4.4860,  pop: 139676  },
-  { name: "Tours",               lat: 47.3941,  lng:  0.6848,  pop: 135787  },
-  { name: "Amiens",              lat: 49.8941,  lng:  2.2957,  pop: 134381  },
-  { name: "Limoges",             lat: 45.8336,  lng:  1.2611,  pop: 132175  },
-  { name: "Annecy",              lat: 45.8992,  lng:  6.1294,  pop: 126924  },
-  { name: "Perpignan",           lat: 42.6986,  lng:  2.8954,  pop: 120158  },
-  { name: "Besançon",            lat: 47.2378,  lng:  6.0241,  pop: 116354  },
-  { name: "Orléans",             lat: 47.9029,  lng:  1.9039,  pop: 116238  },
-  { name: "Rouen",               lat: 49.4432,  lng:  1.0993,  pop: 110145  },
-  { name: "Mulhouse",            lat: 47.7508,  lng:  7.3359,  pop: 108312  },
-  { name: "Caen",                lat: 49.1829,  lng: -0.3707,  pop: 105354  },
-  { name: "Nancy",               lat: 48.6921,  lng:  6.1844,  pop: 104321  },
-  { name: "Argenteuil",          lat: 48.9472,  lng:  2.2467,  pop: 108245  },
-  { name: "Montreuil",           lat: 48.8630,  lng:  2.4436,  pop: 107717  },
-  { name: "Metz",                lat: 49.1193,  lng:  6.1757,  pop: 117619  },
-  { name: "Saint-Denis",         lat: 48.9362,  lng:  2.3574,  pop: 111103  },
+/* ══════════════════════════════════════════════════════════════
+   CITY DATA
+   cat:"large"  → population > 100 000  (gray markers, no label)
+   cat:"medium" → population 20 000–100 000 (blue markers, label)
+══════════════════════════════════════════════════════════════ */
+const CITIES_RAW = [
+  // ── GRANDES VILLES (> 100 000 hab) ─────────────────────────
+  { name:"Paris",             lat:48.8566, lng: 2.3522, pop:2161000, cat:"large" },
+  { name:"Marseille",         lat:43.2965, lng: 5.3698, pop: 861635, cat:"large" },
+  { name:"Lyon",              lat:45.7640, lng: 4.8357, pop: 513275, cat:"large" },
+  { name:"Toulouse",          lat:43.6047, lng: 1.4442, pop: 471941, cat:"large" },
+  { name:"Nice",              lat:43.7102, lng: 7.2620, pop: 340017, cat:"large" },
+  { name:"Nantes",            lat:47.2184, lng:-1.5536, pop: 303382, cat:"large" },
+  { name:"Strasbourg",        lat:48.5734, lng: 7.7521, pop: 280966, cat:"large" },
+  { name:"Montpellier",       lat:43.6108, lng: 3.8767, pop: 277639, cat:"large" },
+  { name:"Bordeaux",          lat:44.8378, lng:-0.5792, pop: 252040, cat:"large" },
+  { name:"Lille",             lat:50.6292, lng: 3.0573, pop: 232787, cat:"large" },
+  { name:"Rennes",            lat:48.1173, lng:-1.6778, pop: 211373, cat:"large" },
+  { name:"Reims",             lat:49.2583, lng: 4.0317, pop: 182211, cat:"large" },
+  { name:"Le Havre",          lat:49.4944, lng: 0.1079, pop: 170147, cat:"large" },
+  { name:"Saint-Étienne",     lat:45.4397, lng: 4.3872, pop: 171522, cat:"large" },
+  { name:"Toulon",            lat:43.1242, lng: 5.9280, pop: 169634, cat:"large" },
+  { name:"Grenoble",          lat:45.1885, lng: 5.7245, pop: 158180, cat:"large" },
+  { name:"Dijon",             lat:47.3220, lng: 5.0415, pop: 155090, cat:"large" },
+  { name:"Angers",            lat:47.4784, lng:-0.5632, pop: 151229, cat:"large" },
+  { name:"Nîmes",             lat:43.8367, lng: 4.3601, pop: 148561, cat:"large" },
+  { name:"Villeurbanne",      lat:45.7719, lng: 4.8902, pop: 147712, cat:"large" },
+  { name:"Le Mans",           lat:47.9960, lng: 0.1966, pop: 143240, cat:"large" },
+  { name:"Aix-en-Provence",   lat:43.5297, lng: 5.4474, pop: 141438, cat:"large" },
+  { name:"Clermont-Ferrand",  lat:45.7772, lng: 3.0870, pop: 141569, cat:"large" },
+  { name:"Brest",             lat:48.3905, lng:-4.4860, pop: 139676, cat:"large" },
+  { name:"Tours",             lat:47.3941, lng: 0.6848, pop: 135787, cat:"large" },
+  { name:"Amiens",            lat:49.8941, lng: 2.2957, pop: 134381, cat:"large" },
+  { name:"Limoges",           lat:45.8336, lng: 1.2611, pop: 132175, cat:"large" },
+  { name:"Annecy",            lat:45.8992, lng: 6.1294, pop: 126924, cat:"large" },
+  { name:"Perpignan",         lat:42.6986, lng: 2.8954, pop: 120158, cat:"large" },
+  { name:"Besançon",          lat:47.2378, lng: 6.0241, pop: 116354, cat:"large" },
+  { name:"Orléans",           lat:47.9029, lng: 1.9039, pop: 116238, cat:"large" },
+  { name:"Metz",              lat:49.1193, lng: 6.1757, pop: 117619, cat:"large" },
+  { name:"Rouen",             lat:49.4432, lng: 1.0993, pop: 110145, cat:"large" },
+  { name:"Mulhouse",          lat:47.7508, lng: 7.3359, pop: 108312, cat:"large" },
+  { name:"Caen",              lat:49.1829, lng:-0.3707, pop: 105354, cat:"large" },
+  { name:"Nancy",             lat:48.6921, lng: 6.1844, pop: 104321, cat:"large" },
+  { name:"Argenteuil",        lat:48.9472, lng: 2.2467, pop: 108245, cat:"large" },
+  { name:"Montreuil",         lat:48.8630, lng: 2.4436, pop: 107717, cat:"large" },
+  { name:"Saint-Denis",       lat:48.9362, lng: 2.3574, pop: 111103, cat:"large" },
 
-  // ── MEDIUM cities (20 000 – 100 000 hab) ────────────────────────────────
-  { name: "Avignon",             lat: 43.9493,  lng:  4.8055,  pop: 93642   },
-  { name: "Nanterre",            lat: 48.8924,  lng:  2.2071,  pop: 93521   },
-  { name: "Vitry-sur-Seine",     lat: 48.7875,  lng:  2.3928,  pop: 93000   },
-  { name: "Créteil",             lat: 48.7802,  lng:  2.4556,  pop: 90000   },
-  { name: "Poitiers",            lat: 46.5802,  lng:  0.3404,  pop: 88291   },
-  { name: "Asnières-sur-Seine",  lat: 48.9130,  lng:  2.2839,  pop: 86800   },
-  { name: "Versailles",          lat: 48.8049,  lng:  2.1204,  pop: 86477   },
-  { name: "Aubervilliers",       lat: 48.9139,  lng:  2.3836,  pop: 82000   },
-  { name: "Courbevoie",          lat: 48.8972,  lng:  2.2531,  pop: 79000   },
-  { name: "Rueil-Malmaison",     lat: 48.8759,  lng:  2.1888,  pop: 79400   },
-  { name: "La Rochelle",         lat: 46.1591,  lng: -1.1520,  pop: 77196   },
-  { name: "Pau",                 lat: 43.2951,  lng: -0.3708,  pop: 77130   },
-  { name: "Antibes",             lat: 43.5804,  lng:  7.1284,  pop: 76260   },
-  { name: "Cannes",              lat: 43.5528,  lng:  7.0174,  pop: 73603   },
-  { name: "Calais",              lat: 50.9513,  lng:  1.8587,  pop: 73616   },
-  { name: "Tourcoing",           lat: 50.7239,  lng:  3.1612,  pop: 97017   },
-  { name: "Roubaix",             lat: 50.6927,  lng:  3.1747,  pop: 96984   },
-  { name: "Saint-Nazaire",       lat: 47.2735,  lng: -2.2137,  pop: 68000   },
-  { name: "Issy-les-Moulineaux", lat: 48.8232,  lng:  2.2694,  pop: 68000   },
-  { name: "Mérignac",            lat: 44.8386,  lng: -0.6444,  pop: 68500   },
-  { name: "Colmar",              lat: 48.0793,  lng:  7.3585,  pop: 67615   },
-  { name: "Noisy-le-Grand",      lat: 48.8482,  lng:  2.5532,  pop: 65000   },
-  { name: "Pessac",              lat: 44.8060,  lng: -0.6306,  pop: 63000   },
-  { name: "Quimper",             lat: 47.9963,  lng: -4.0971,  pop: 63079   },
-  { name: "La Seyne-sur-Mer",    lat: 43.1021,  lng:  5.8837,  pop: 64000   },
-  { name: "Levallois-Perret",    lat: 48.8952,  lng:  2.2866,  pop: 64000   },
-  { name: "Ivry-sur-Seine",      lat: 48.8139,  lng:  2.3838,  pop: 61000   },
-  { name: "Clichy",              lat: 48.9047,  lng:  2.3042,  pop: 62000   },
-  { name: "Villeneuve-d'Ascq",   lat: 50.6128,  lng:  3.1472,  pop: 62000   },
-  { name: "Valence",             lat: 44.9334,  lng:  4.8924,  pop: 63757   },
-  { name: "Dunkerque",           lat: 51.0383,  lng:  2.3777,  pop: 89900   },
-  { name: "Cherbourg-en-Cotentin",lat:49.6338,  lng: -1.6218,  pop: 78700   },
-  { name: "Niort",               lat: 46.3255,  lng: -0.4637,  pop: 57900   },
-  { name: "Lorient",             lat: 47.7483,  lng: -3.3670,  pop: 57908   },
-  { name: "Beauvais",            lat: 49.4309,  lng:  2.0806,  pop: 56500   },
-  { name: "Saint-Quentin",       lat: 49.8475,  lng:  3.2876,  pop: 56000   },
-  { name: "Bourges",             lat: 47.0818,  lng:  2.3986,  pop: 65545   },
-  { name: "Fontenay-sous-Bois",  lat: 48.8517,  lng:  2.4786,  pop: 52000   },
-  { name: "Bondy",               lat: 48.9025,  lng:  2.4821,  pop: 52000   },
-  { name: "Vincennes",           lat: 48.8474,  lng:  2.4388,  pop: 50000   },
-  { name: "Vannes",              lat: 47.6559,  lng: -2.7603,  pop: 54600   },
-  { name: "Cholet",              lat: 47.0594,  lng: -0.8794,  pop: 54600   },
-  { name: "Hyères",              lat: 43.1201,  lng:  6.1285,  pop: 54800   },
-  { name: "Fréjus",              lat: 43.4330,  lng:  6.7366,  pop: 53300   },
-  { name: "La Roche-sur-Yon",    lat: 46.6704,  lng: -1.4257,  pop: 53900   },
-  { name: "Grasse",              lat: 43.6588,  lng:  6.9228,  pop: 51500   },
-  { name: "Albi",                lat: 43.9291,  lng:  2.1481,  pop: 51030   },
-  { name: "Arles",               lat: 43.6769,  lng:  4.6277,  pop: 52500   },
-  { name: "Martigues",           lat: 43.4048,  lng:  5.0474,  pop: 48000   },
-  { name: "Brive-la-Gaillarde",  lat: 45.1583,  lng:  1.5325,  pop: 47200   },
-  { name: "Charleville-Mézières",lat: 49.7742,  lng:  4.7174,  pop: 47315   },
-  { name: "Blois",               lat: 47.5861,  lng:  1.3359,  pop: 46000   },
-  { name: "Aubagne",             lat: 43.2925,  lng:  5.5668,  pop: 45500   },
-  { name: "Châlons-en-Champagne",lat: 48.9579,  lng:  4.3658,  pop: 44640   },
-  { name: "Salon-de-Provence",   lat: 43.6394,  lng:  5.0974,  pop: 43000   },
-  { name: "Istres",              lat: 43.5138,  lng:  4.9877,  pop: 42000   },
-  { name: "Valenciennes",        lat: 50.3581,  lng:  3.5234,  pop: 43200   },
-  { name: "Châteauroux",         lat: 46.8150,  lng:  1.6956,  pop: 43200   },
-  { name: "Arras",               lat: 50.2924,  lng:  2.7769,  pop: 42090   },
-  { name: "Saint-Brieuc",        lat: 48.5137,  lng: -2.7653,  pop: 44100   },
-  { name: "Douai",               lat: 50.3714,  lng:  3.0808,  pop: 41440   },
-  { name: "Bourg-en-Bresse",     lat: 46.2046,  lng:  5.2255,  pop: 41400   },
-  { name: "Laval",               lat: 48.0740,  lng: -0.7709,  pop: 49200   },
-  { name: "Évreux",              lat: 49.0199,  lng:  1.1527,  pop: 49200   },
-  { name: "Gap",                 lat: 44.5594,  lng:  6.0795,  pop: 40400   },
-  { name: "Compiègne",           lat: 49.4175,  lng:  2.8237,  pop: 40200   },
-  { name: "Boulogne-sur-Mer",    lat: 50.7263,  lng:  1.6139,  pop: 40693   },
-  { name: "Chartres",            lat: 48.4565,  lng:  1.4840,  pop: 39000   },
-  { name: "Melun",               lat: 48.5400,  lng:  2.6566,  pop: 39000   },
-  { name: "Draguignan",          lat: 43.5374,  lng:  6.4645,  pop: 38600   },
-  { name: "Montélimar",          lat: 44.5567,  lng:  4.7528,  pop: 38000   },
-  { name: "Thonon-les-Bains",    lat: 46.3705,  lng:  6.4779,  pop: 36000   },
-  { name: "Roanne",              lat: 46.0338,  lng:  4.0697,  pop: 35500   },
-  { name: "Auxerre",             lat: 47.7983,  lng:  3.5676,  pop: 35400   },
-  { name: "Haguenau",            lat: 48.8148,  lng:  7.7898,  pop: 35200   },
-  { name: "Creil",               lat: 49.2581,  lng:  2.4847,  pop: 35000   },
-  { name: "Annemasse",           lat: 46.1942,  lng:  6.2349,  pop: 34000   },
-  { name: "Romans-sur-Isère",    lat: 45.0447,  lng:  5.0526,  pop: 33000   },
-  { name: "Mâcon",               lat: 46.3073,  lng:  4.8328,  pop: 33000   },
-  { name: "Nevers",              lat: 46.9897,  lng:  3.1572,  pop: 33000   },
-  { name: "Belfort",             lat: 47.6394,  lng:  6.8627,  pop: 49600   },
-  { name: "Meaux",               lat: 48.9605,  lng:  2.8887,  pop: 55040   },
-  { name: "Bayonne",             lat: 43.4929,  lng: -1.4748,  pop: 52178   },
-  { name: "Montauban",           lat: 44.0175,  lng:  1.3572,  pop: 56716   },
-  { name: "Narbonne",            lat: 43.1837,  lng:  3.0020,  pop: 55400   },
-  { name: "Béziers",             lat: 43.3442,  lng:  3.2150,  pop: 77000   },
-  { name: "Sète",                lat: 43.4025,  lng:  3.6974,  pop: 43680   },
-  { name: "Carcassonne",         lat: 43.2130,  lng:  2.3491,  pop: 47300   },
-  { name: "Tarbes",              lat: 43.2328,  lng:  0.0780,  pop: 41500   },
-  { name: "Thionville",          lat: 49.3586,  lng:  6.1679,  pop: 41500   },
-  { name: "Montbéliard",         lat: 47.5105,  lng:  6.7983,  pop: 26200   },
-  { name: "Chalon-sur-Saône",    lat: 46.7800,  lng:  4.8536,  pop: 46400   },
-  { name: "Vitrolles",           lat: 43.4634,  lng:  5.2471,  pop: 36000   },
-  { name: "Chambéry",            lat: 45.5646,  lng:  5.9178,  pop: 58584   },
-  { name: "Orange",              lat: 44.1367,  lng:  4.8072,  pop: 30000   },
-  { name: "Carpentras",          lat: 44.0548,  lng:  5.0478,  pop: 30000   },
-  { name: "Maubeuge",            lat: 50.2791,  lng:  3.9753,  pop: 30000   },
-  { name: "Mont-de-Marsan",      lat: 43.8911,  lng: -0.5000,  pop: 31500   },
-  { name: "Lens",                lat: 50.4317,  lng:  2.8314,  pop: 31500   },
-  { name: "Épinal",              lat: 48.1736,  lng:  6.4500,  pop: 31900   },
-  { name: "Soissons",            lat: 49.3817,  lng:  3.3237,  pop: 29000   },
-  { name: "Agen",                lat: 44.2000,  lng:  0.6167,  pop: 33900   },
-  { name: "Rodez",               lat: 44.3505,  lng:  2.5725,  pop: 25200   },
-  { name: "Montluçon",           lat: 46.3405,  lng:  2.6041,  pop: 37000   },
-  { name: "Vichy",               lat: 46.1278,  lng:  3.4267,  pop: 25200   },
-  { name: "Périgueux",           lat: 45.1858,  lng:  0.7205,  pop: 28140   },
-  { name: "Vierzon",             lat: 47.2195,  lng:  2.0695,  pop: 27500   },
-  { name: "Saumur",              lat: 47.2596,  lng: -0.0786,  pop: 27500   },
-  { name: "Alençon",             lat: 48.4305,  lng:  0.0909,  pop: 27000   },
-  { name: "Menton",              lat: 43.7753,  lng:  7.5016,  pop: 28500   },
-  { name: "Laon",                lat: 49.5634,  lng:  3.6218,  pop: 26200   },
-  { name: "Bourgoin-Jallieu",    lat: 45.5863,  lng:  5.2696,  pop: 28000   },
-  { name: "Auch",                lat: 43.6462,  lng:  0.5862,  pop: 23600   },
-  { name: "Lisieux",             lat: 49.1437,  lng:  0.2262,  pop: 20600   },
-  { name: "Troyes",              lat: 48.2973,  lng:  4.0744,  pop: 60750   },
-  { name: "Angoulême",           lat: 45.6500,  lng:  0.1560,  pop: 41900   },
-  { name: "Saint-Lô",            lat: 49.1170,  lng: -1.0867,  pop: 20000   },
-  { name: "Dax",                 lat: 43.7094,  lng: -1.0536,  pop: 21600   },
-  { name: "Forbach",             lat: 49.1848,  lng:  6.9004,  pop: 21000   },
-  { name: "Sarreguemines",       lat: 49.1133,  lng:  7.0666,  pop: 21000   },
-  { name: "Saint-Louis",         lat: 47.5893,  lng:  7.5089,  pop: 22000   },
-  { name: "Cahors",              lat: 44.4481,  lng:  1.4420,  pop: 20000   },
-  { name: "Maubeuge",            lat: 50.2791,  lng:  3.9753,  pop: 30000   },
+  // ── VILLES MOYENNES (20 000 – 100 000 hab) ─────────────────
+  { name:"Avignon",               lat:43.9493, lng: 4.8055, pop: 93642, cat:"medium" },
+  { name:"Nanterre",              lat:48.8924, lng: 2.2071, pop: 93521, cat:"medium" },
+  { name:"Vitry-sur-Seine",       lat:48.7875, lng: 2.3928, pop: 93000, cat:"medium" },
+  { name:"Créteil",               lat:48.7802, lng: 2.4556, pop: 90000, cat:"medium" },
+  { name:"Tourcoing",             lat:50.7239, lng: 3.1612, pop: 97017, cat:"medium" },
+  { name:"Roubaix",               lat:50.6927, lng: 3.1747, pop: 96984, cat:"medium" },
+  { name:"Dunkerque",             lat:51.0383, lng: 2.3777, pop: 89900, cat:"medium" },
+  { name:"Asnières-sur-Seine",    lat:48.9130, lng: 2.2839, pop: 86800, cat:"medium" },
+  { name:"Versailles",            lat:48.8049, lng: 2.1204, pop: 86477, cat:"medium" },
+  { name:"Poitiers",              lat:46.5802, lng: 0.3404, pop: 88291, cat:"medium" },
+  { name:"Aubervilliers",         lat:48.9139, lng: 2.3836, pop: 82000, cat:"medium" },
+  { name:"Courbevoie",            lat:48.8972, lng: 2.2531, pop: 79000, cat:"medium" },
+  { name:"Rueil-Malmaison",       lat:48.8759, lng: 2.1888, pop: 79400, cat:"medium" },
+  { name:"La Rochelle",           lat:46.1591, lng:-1.1520, pop: 77196, cat:"medium" },
+  { name:"Pau",                   lat:43.2951, lng:-0.3708, pop: 77130, cat:"medium" },
+  { name:"Béziers",               lat:43.3442, lng: 3.2150, pop: 77000, cat:"medium" },
+  { name:"Antibes",               lat:43.5804, lng: 7.1284, pop: 76260, cat:"medium" },
+  { name:"Cannes",                lat:43.5528, lng: 7.0174, pop: 73603, cat:"medium" },
+  { name:"Calais",                lat:50.9513, lng: 1.8587, pop: 73616, cat:"medium" },
+  { name:"Mérignac",              lat:44.8386, lng:-0.6444, pop: 68500, cat:"medium" },
+  { name:"Saint-Nazaire",         lat:47.2735, lng:-2.2137, pop: 68000, cat:"medium" },
+  { name:"Issy-les-Moulineaux",   lat:48.8232, lng: 2.2694, pop: 68000, cat:"medium" },
+  { name:"Colmar",                lat:48.0793, lng: 7.3585, pop: 67615, cat:"medium" },
+  { name:"Noisy-le-Grand",        lat:48.8482, lng: 2.5532, pop: 65000, cat:"medium" },
+  { name:"Pessac",                lat:44.8060, lng:-0.6306, pop: 63000, cat:"medium" },
+  { name:"Quimper",               lat:47.9963, lng:-4.0971, pop: 63079, cat:"medium" },
+  { name:"Ivry-sur-Seine",        lat:48.8139, lng: 2.3838, pop: 61000, cat:"medium" },
+  { name:"Villeneuve-d'Ascq",     lat:50.6128, lng: 3.1472, pop: 62000, cat:"medium" },
+  { name:"Clichy",                lat:48.9047, lng: 2.3042, pop: 62000, cat:"medium" },
+  { name:"Levallois-Perret",      lat:48.8952, lng: 2.2866, pop: 64000, cat:"medium" },
+  { name:"Valence",               lat:44.9334, lng: 4.8924, pop: 63757, cat:"medium" },
+  { name:"La Seyne-sur-Mer",      lat:43.1021, lng: 5.8837, pop: 64000, cat:"medium" },
+  { name:"Bourges",               lat:47.0818, lng: 2.3986, pop: 65545, cat:"medium" },
+  { name:"Troyes",                lat:48.2973, lng: 4.0744, pop: 60750, cat:"medium" },
+  { name:"Fontenay-sous-Bois",    lat:48.8517, lng: 2.4786, pop: 52000, cat:"medium" },
+  { name:"Bondy",                 lat:48.9025, lng: 2.4821, pop: 52000, cat:"medium" },
+  { name:"Vincennes",             lat:48.8474, lng: 2.4388, pop: 50000, cat:"medium" },
+  { name:"Lorient",               lat:47.7483, lng:-3.3670, pop: 57908, cat:"medium" },
+  { name:"Niort",                 lat:46.3255, lng:-0.4637, pop: 57900, cat:"medium" },
+  { name:"Beauvais",              lat:49.4309, lng: 2.0806, pop: 56500, cat:"medium" },
+  { name:"Saint-Quentin",         lat:49.8475, lng: 3.2876, pop: 56000, cat:"medium" },
+  { name:"Vannes",                lat:47.6559, lng:-2.7603, pop: 54600, cat:"medium" },
+  { name:"Cholet",                lat:47.0594, lng:-0.8794, pop: 54600, cat:"medium" },
+  { name:"Hyères",                lat:43.1201, lng: 6.1285, pop: 54800, cat:"medium" },
+  { name:"Fréjus",                lat:43.4330, lng: 6.7366, pop: 53300, cat:"medium" },
+  { name:"Grasse",                lat:43.6588, lng: 6.9228, pop: 51500, cat:"medium" },
+  { name:"Albi",                  lat:43.9291, lng: 2.1481, pop: 51030, cat:"medium" },
+  { name:"La Roche-sur-Yon",      lat:46.6704, lng:-1.4257, pop: 53900, cat:"medium" },
+  { name:"Arles",                 lat:43.6769, lng: 4.6277, pop: 52500, cat:"medium" },
+  { name:"Bayonne",               lat:43.4929, lng:-1.4748, pop: 52178, cat:"medium" },
+  { name:"Meaux",                 lat:48.9605, lng: 2.8887, pop: 55040, cat:"medium" },
+  { name:"Narbonne",              lat:43.1837, lng: 3.0020, pop: 55400, cat:"medium" },
+  { name:"Laval",                 lat:48.0740, lng:-0.7709, pop: 49200, cat:"medium" },
+  { name:"Évreux",                lat:49.0199, lng: 1.1527, pop: 49200, cat:"medium" },
+  { name:"Belfort",               lat:47.6394, lng: 6.8627, pop: 49600, cat:"medium" },
+  { name:"Aubagne",               lat:43.2925, lng: 5.5668, pop: 45500, cat:"medium" },
+  { name:"Chalon-sur-Saône",      lat:46.7800, lng: 4.8536, pop: 46400, cat:"medium" },
+  { name:"Blois",                 lat:47.5861, lng: 1.3359, pop: 46000, cat:"medium" },
+  { name:"Bourg-en-Bresse",       lat:46.2046, lng: 5.2255, pop: 41400, cat:"medium" },
+  { name:"Charleville-Mézières",  lat:49.7742, lng: 4.7174, pop: 47315, cat:"medium" },
+  { name:"Brive-la-Gaillarde",    lat:45.1583, lng: 1.5325, pop: 47200, cat:"medium" },
+  { name:"Martigues",             lat:43.4048, lng: 5.0474, pop: 48000, cat:"medium" },
+  { name:"Montauban",             lat:44.0175, lng: 1.3572, pop: 56716, cat:"medium" },
+  { name:"Châlons-en-Champagne",  lat:48.9579, lng: 4.3658, pop: 44640, cat:"medium" },
+  { name:"Thionville",            lat:49.3586, lng: 6.1679, pop: 41500, cat:"medium" },
+  { name:"Châteauroux",           lat:46.8150, lng: 1.6956, pop: 43200, cat:"medium" },
+  { name:"Valenciennes",          lat:50.3581, lng: 3.5234, pop: 43200, cat:"medium" },
+  { name:"Salon-de-Provence",     lat:43.6394, lng: 5.0974, pop: 43000, cat:"medium" },
+  { name:"Istres",                lat:43.5138, lng: 4.9877, pop: 42000, cat:"medium" },
+  { name:"Boulogne-sur-Mer",      lat:50.7263, lng: 1.6139, pop: 40693, cat:"medium" },
+  { name:"Arras",                 lat:50.2924, lng: 2.7769, pop: 42090, cat:"medium" },
+  { name:"Douai",                 lat:50.3714, lng: 3.0808, pop: 41440, cat:"medium" },
+  { name:"Thonon-les-Bains",      lat:46.3705, lng: 6.4779, pop: 36000, cat:"medium" },
+  { name:"Gap",                   lat:44.5594, lng: 6.0795, pop: 40400, cat:"medium" },
+  { name:"Chartres",              lat:48.4565, lng: 1.4840, pop: 39000, cat:"medium" },
+  { name:"Melun",                 lat:48.5400, lng: 2.6566, pop: 39000, cat:"medium" },
+  { name:"Montélimar",            lat:44.5567, lng: 4.7528, pop: 38000, cat:"medium" },
+  { name:"Draguignan",            lat:43.5374, lng: 6.4645, pop: 38600, cat:"medium" },
+  { name:"Compiègne",             lat:49.4175, lng: 2.8237, pop: 40200, cat:"medium" },
+  { name:"Montluçon",             lat:46.3405, lng: 2.6041, pop: 37000, cat:"medium" },
+  { name:"Auxerre",               lat:47.7983, lng: 3.5676, pop: 35400, cat:"medium" },
+  { name:"Roanne",                lat:46.0338, lng: 4.0697, pop: 35500, cat:"medium" },
+  { name:"Haguenau",              lat:48.8148, lng: 7.7898, pop: 35200, cat:"medium" },
+  { name:"Annemasse",             lat:46.1942, lng: 6.2349, pop: 34000, cat:"medium" },
+  { name:"Agen",                  lat:44.2000, lng: 0.6167, pop: 33900, cat:"medium" },
+  { name:"Romans-sur-Isère",      lat:45.0447, lng: 5.0526, pop: 33000, cat:"medium" },
+  { name:"Nevers",                lat:46.9897, lng: 3.1572, pop: 33000, cat:"medium" },
+  { name:"Mâcon",                 lat:46.3073, lng: 4.8328, pop: 33000, cat:"medium" },
+  { name:"Creil",                 lat:49.2581, lng: 2.4847, pop: 35000, cat:"medium" },
+  { name:"Tarbes",                lat:43.2328, lng: 0.0780, pop: 41500, cat:"medium" },
+  { name:"Vitrolles",             lat:43.4634, lng: 5.2471, pop: 36000, cat:"medium" },
+  { name:"Saint-Brieuc",          lat:48.5137, lng:-2.7653, pop: 44100, cat:"medium" },
+  { name:"Orange",                lat:44.1367, lng: 4.8072, pop: 30000, cat:"medium" },
+  { name:"Carpentras",            lat:44.0548, lng: 5.0478, pop: 30000, cat:"medium" },
+  { name:"Maubeuge",              lat:50.2791, lng: 3.9753, pop: 30000, cat:"medium" },
+  { name:"Lens",                  lat:50.4317, lng: 2.8314, pop: 31500, cat:"medium" },
+  { name:"Mont-de-Marsan",        lat:43.8911, lng:-0.5000, pop: 31500, cat:"medium" },
+  { name:"Sète",                  lat:43.4025, lng: 3.6974, pop: 43680, cat:"medium" },
+  { name:"Carcassonne",           lat:43.2130, lng: 2.3491, pop: 47300, cat:"medium" },
+  { name:"Vierzon",               lat:47.2195, lng: 2.0695, pop: 27500, cat:"medium" },
+  { name:"Saumur",                lat:47.2596, lng:-0.0786, pop: 27500, cat:"medium" },
+  { name:"Alençon",               lat:48.4305, lng: 0.0909, pop: 27000, cat:"medium" },
+  { name:"Rodez",                 lat:44.3505, lng: 2.5725, pop: 25200, cat:"medium" },
+  { name:"Soissons",              lat:49.3817, lng: 3.3237, pop: 29000, cat:"medium" },
+  { name:"Laon",                  lat:49.5634, lng: 3.6218, pop: 26200, cat:"medium" },
+  { name:"Menton",                lat:43.7753, lng: 7.5016, pop: 28500, cat:"medium" },
+  { name:"Bourgoin-Jallieu",      lat:45.5863, lng: 5.2696, pop: 28000, cat:"medium" },
+  { name:"Vichy",                 lat:46.1278, lng: 3.4267, pop: 25200, cat:"medium" },
+  { name:"Auch",                  lat:43.6462, lng: 0.5862, pop: 23600, cat:"medium" },
+  { name:"Périgueux",             lat:45.1858, lng: 0.7205, pop: 28140, cat:"medium" },
+  { name:"Lisieux",               lat:49.1437, lng: 0.2262, pop: 20600, cat:"medium" },
+  { name:"Saint-Lô",              lat:49.1170, lng:-1.0867, pop: 20000, cat:"medium" },
+  { name:"Cahors",                lat:44.4481, lng: 1.4420, pop: 20000, cat:"medium" },
+  { name:"Dax",                   lat:43.7094, lng:-1.0536, pop: 21600, cat:"medium" },
+  { name:"Forbach",               lat:49.1848, lng: 6.9004, pop: 21000, cat:"medium" },
+  { name:"Sarreguemines",         lat:49.1133, lng: 7.0666, pop: 21000, cat:"medium" },
+  { name:"Saint-Louis",           lat:47.5893, lng: 7.5089, pop: 22000, cat:"medium" },
+  { name:"Épinal",                lat:48.1736, lng: 6.4500, pop: 31900, cat:"medium" },
+  { name:"Montbéliard",           lat:47.5105, lng: 6.7983, pop: 26200, cat:"medium" },
+  { name:"Cherbourg-en-Cotentin", lat:49.6338, lng:-1.6218, pop: 78700, cat:"medium" },
+  { name:"Angoulême",             lat:45.6500, lng: 0.1560, pop: 41900, cat:"medium" },
+  { name:"Chambéry",              lat:45.5646, lng: 5.9178, pop: 58584, cat:"medium" },
 ];
 
-// ─────────────────────────────────────────────
-//  Map initialisation
-// ─────────────────────────────────────────────
+/* deduplicate by name */
+const seenNames = new Set();
+const CITIES = CITIES_RAW.filter(c => {
+  if (seenNames.has(c.name)) return false;
+  seenNames.add(c.name);
+  return true;
+});
+
+/* ═══════════════════════════════════════════════════════════
+   COLOUR PALETTE
+═══════════════════════════════════════════════════════════ */
+const COLOR = {
+  medium:   '#2563eb',
+  large:    '#9ca3af',
+  selected: '#ef4444',
+};
+
+/* ═══════════════════════════════════════════════════════════
+   MAP INITIALISATION
+═══════════════════════════════════════════════════════════ */
 const map = L.map('map', {
   center: [46.5, 2.5],
   zoom: 6,
@@ -320,142 +335,149 @@ const map = L.map('map', {
   zoomControl: true,
 });
 
-// CartoDB Positron basemap
 L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+  attribution:
+    '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors ' +
+    '&copy; <a href="https://carto.com/attributions">CARTO</a>',
   subdomains: 'abcd',
-  maxZoom: 19,
+  maxZoom: 20,
 }).addTo(map);
 
-// ─────────────────────────────────────────────
-//  Department boundaries GeoJSON
-// ─────────────────────────────────────────────
+/* ═══════════════════════════════════════════════════════════
+   DEPARTEMENT BOUNDARIES (GeoJSON fetch)
+═══════════════════════════════════════════════════════════ */
 fetch('https://raw.githubusercontent.com/gregoiredavid/france-geojson/master/departements-version-simplifiee.geojson')
   .then(r => r.json())
   .then(data => {
     L.geoJSON(data, {
-      className: 'dept-boundary',
       style: {
         color: '#374151',
         weight: 1,
+        opacity: 0.55,
         fillOpacity: 0,
-        opacity: 0.6,
       },
       interactive: false,
     }).addTo(map);
   })
-  .catch(() => console.warn('Impossible de charger les frontières des départements.'));
+  .catch(err => console.warn('Departement boundaries unavailable:', err));
 
-// ─────────────────────────────────────────────
-//  City markers
-// ─────────────────────────────────────────────
-const MEDIUM_MIN  = 20000;
-const MEDIUM_MAX  = 100000;
-
-// Style constants
-const STYLE_MEDIUM   = { radius: 6,  color: '#1d4ed8', fillColor: '#2563eb', fillOpacity: 0.85, weight: 1.5 };
-const STYLE_LARGE    = { radius: 8,  color: '#6b7280', fillColor: '#9ca3af', fillOpacity: 0.70, weight: 1.5 };
-const STYLE_SELECTED = { color: '#b91c1c', fillColor: '#ef4444', fillOpacity: 0.95, weight: 2 };
-
-let selectedMarker = null;
-let selectedOrigStyle = null;
-
-function formatPop(n) {
-  return n.toLocaleString('fr-FR') + ' hab.';
+/* ═══════════════════════════════════════════════════════════
+   MARKER HELPERS
+═══════════════════════════════════════════════════════════ */
+function baseStyle(city) {
+  return city.cat === 'large'
+    ? { radius: 8, fillColor: COLOR.large,  fillOpacity: 0.70, weight: 1.5, color: '#6b7280' }
+    : { radius: 6, fillColor: COLOR.medium, fillOpacity: 0.85, weight: 1.5, color: '#1e40af' };
 }
 
-// De-duplicate cities (same name can appear twice in the data)
-const seen = new Set();
-const uniqueCities = CITIES.filter(c => {
-  if (seen.has(c.name)) return false;
-  seen.add(c.name);
-  return true;
-});
+function selectedStyle() {
+  return { fillColor: COLOR.selected, fillOpacity: 0.95, color: '#991b1b', weight: 2 };
+}
 
-// Reset a previously selected marker
-function resetSelected() {
-  if (selectedMarker && selectedOrigStyle) {
-    selectedMarker.setStyle(selectedOrigStyle);
-    selectedMarker.closePopup();
-    selectedMarker = null;
-    selectedOrigStyle = null;
+function formatPop(n) {
+  return n.toLocaleString('fr-FR') + ' hab.';
+}
+
+function popupHTML(city, selected) {
+  const cls   = selected ? 'selected' : city.cat;
+  const label = selected ? 'Sélectionnée' : (city.cat === 'large' ? 'Grande ville' : 'Ville moyenne');
+  return `<div class="popup-name">${city.name}</div>` +
+         `<div class="popup-pop">Population : <strong>${formatPop(city.pop)}</strong></div>` +
+         `<span class="popup-type ${cls}">${label}</span>`;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   BUILD MARKERS
+═══════════════════════════════════════════════════════════ */
+let activeMarker = null;
+let activeCity   = null;
+
+function deselect() {
+  if (activeMarker) {
+    activeMarker.setStyle(baseStyle(activeCity));
+    activeMarker.setPopupContent(popupHTML(activeCity, false));
+    activeMarker = null;
+    activeCity   = null;
   }
 }
 
-// Click on map background → deselect
-map.on('click', resetSelected);
+const allMarkerData = []; // { city, marker }
 
-uniqueCities.forEach(city => {
-  const isMedium = city.pop >= MEDIUM_MIN && city.pop < MEDIUM_MAX;
-  const isLarge  = city.pop >= MEDIUM_MAX;
+CITIES.forEach(city => {
+  const marker = L.circleMarker([city.lat, city.lng], {
+    ...baseStyle(city),
+    interactive: true,
+  });
 
-  // Skip cities below 20k
-  if (city.pop < MEDIUM_MIN) return;
-
-  const baseStyle = isMedium ? { ...STYLE_MEDIUM } : { ...STYLE_LARGE };
-
-  const marker = L.circleMarker([city.lat, city.lng], { ...baseStyle, interactive: true });
-
-  // Persistent label for medium cities only
-  if (isMedium) {
+  /* Permanent label — medium cities only */
+  if (city.cat === 'medium') {
     marker.bindTooltip(city.name, {
       permanent: true,
       direction: 'right',
       offset: [8, 0],
       className: 'city-label',
+      opacity: 1,
     });
   }
 
-  // Popup (shown on click)
-  const popupContent = `
-    <div class="popup-name">${city.name}</div>
-    <div class="popup-pop">${formatPop(city.pop)}</div>
-  `;
-  marker.bindPopup(popupContent, { closeButton: false, offset: [0, -4] });
+  /* Popup */
+  marker.bindPopup(popupHTML(city, false), {
+    closeButton: true,
+    autoClose: true,
+  });
 
   marker.on('click', function (e) {
-    L.DomEvent.stopPropagation(e); // prevent map click from firing
+    L.DomEvent.stopPropagation(e);
 
-    if (selectedMarker === marker) {
-      // Toggle off
-      resetSelected();
+    if (activeMarker === marker) {
+      deselect();
+      marker.closePopup();
       return;
     }
 
-    // Deselect previous
-    resetSelected();
-
-    // Select this one
-    selectedOrigStyle = { ...baseStyle };
-    marker.setStyle(STYLE_SELECTED);
+    deselect();
+    activeMarker = marker;
+    activeCity   = city;
+    marker.setStyle({ ...baseStyle(city), ...selectedStyle() });
+    marker.setPopupContent(popupHTML(city, true));
     marker.openPopup();
-    selectedMarker = marker;
   });
 
   marker.addTo(map);
+  allMarkerData.push({ city, marker });
 });
 
-// ─────────────────────────────────────────────
-//  Legend
-// ─────────────────────────────────────────────
+/* Click on map background resets selection */
+map.on('click', deselect);
+
+/* ═══════════════════════════════════════════════════════════
+   LABEL VISIBILITY  (hide medium labels at low zoom)
+═══════════════════════════════════════════════════════════ */
+function syncLabels() {
+  const z = map.getZoom();
+  allMarkerData.forEach(({ city, marker }) => {
+    if (city.cat !== 'medium') return;
+    const tt = marker.getTooltip();
+    if (!tt) return;
+    const el = tt.getElement();
+    if (!el) return;
+    el.style.display = (z >= 7) ? '' : 'none';
+  });
+}
+map.on('zoomend', syncLabels);
+map.whenReady(syncLabels);
+
+/* ═══════════════════════════════════════════════════════════
+   LEGEND
+═══════════════════════════════════════════════════════════ */
 const legend = L.control({ position: 'bottomright' });
 legend.onAdd = function () {
   const div = L.DomUtil.create('div', 'legend');
-  div.innerHTML = `
-    <h4>Légende</h4>
-    <div class="legend-item">
-      <span class="legend-dot dot-medium"></span>
-      <span>Ville moyenne (20k – 100k)</span>
-    </div>
-    <div class="legend-item">
-      <span class="legend-dot dot-large"></span>
-      <span>Grande ville (&gt; 100k)</span>
-    </div>
-    <div class="legend-item">
-      <span class="legend-dot dot-selected"></span>
-      <span>Ville sélectionnée</span>
-    </div>
-  `;
+  div.innerHTML =
+    '<div class="legend-title">Légende</div>' +
+    '<div class="legend-row"><span class="legend-dot" style="background:' + COLOR.medium + ';border-color:#1e40af;"></span><span>Ville moyenne (20 000–100 000 hab)</span></div>' +
+    '<div class="legend-row"><span class="legend-dot" style="background:' + COLOR.large  + ';border-color:#6b7280;"></span><span>Grande ville (&gt; 100 000 hab)</span></div>' +
+    '<div class="legend-row"><span class="legend-dot" style="background:' + COLOR.selected + ';border-color:#991b1b;"></span><span>Ville sélectionnée</span></div>';
   L.DomEvent.disableClickPropagation(div);
   return div;
 };
