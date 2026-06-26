@@ -602,7 +602,6 @@ body.menu-open .menu { opacity: 1; visibility: visible; transform: none; }
   padding-top: 2rem; border-top: 1px solid var(--line);
   font-family: var(--mono); font-size: .68rem; letter-spacing: .1em; color: var(--bone-faint);
 }
-.footer__disclaimer { margin-top: 1.6rem; max-width: 70ch; font-size: .72rem; line-height: 1.6; color: var(--bone-faint); }
 
 /* =========================================================
    RÉVÉLATION AU SCROLL
