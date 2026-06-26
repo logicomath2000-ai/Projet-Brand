@@ -1,320 +1,242 @@
+/* =========================================================
+   ŒIL STUDIO — interactions
+   ========================================================= */
 (() => {
   'use strict';
 
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const isFinePointer = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+  const finePointer  = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+  const $  = (s, c = document) => c.querySelector(s);
+  const $$ = (s, c = document) => Array.from(c.querySelectorAll(s));
 
-  // ---------- Loader (candle) ----------
-  const loader = document.querySelector('[data-loader]');
-  const finishIntro = () => {
-    document.body.classList.remove('is-loading');
-    document.body.classList.add('intro-done');
-  };
-
-  if (!loader || reduceMotion) {
-    finishIntro();
-    if (loader) loader.remove();
-  } else {
-    const hideLoader = () => {
-      loader.classList.add('is-blowing');
-      setTimeout(() => {
-        loader.classList.add('is-done');
-        finishIntro();
-        setTimeout(() => loader.remove(), 900);
-      }, 650);
-    };
-    if (document.readyState === 'complete') {
-      setTimeout(hideLoader, 1500);
-    } else {
-      window.addEventListener('load', () => setTimeout(hideLoader, 800));
-      // fallback in case load never fires
-      setTimeout(hideLoader, 3500);
+  /* ---------- Iris : fibres générées ---------- */
+  const fibers = $('[data-fibers]');
+  if (fibers) {
+    const cx = 500, cy = 300, rIn = 60, rOut = 150;
+    const ns = 'http://www.w3.org/2000/svg';
+    let markup = '';
+    for (let i = 0; i < 130; i++) {
+      const a = (i / 130) * Math.PI * 2 + (Math.random() - 0.5) * 0.06;
+      const jitterIn  = rIn + Math.random() * 8;
+      const jitterOut = rOut - Math.random() * 38;
+      const x1 = cx + Math.cos(a) * jitterIn;
+      const y1 = cy + Math.sin(a) * jitterIn;
+      const x2 = cx + Math.cos(a) * jitterOut;
+      const y2 = cy + Math.sin(a) * jitterOut;
+      const o  = (0.15 + Math.random() * 0.5).toFixed(2);
+      markup += `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke-opacity="${o}"/>`;
+    }
+    fibers.innerHTML = markup;
+    // discret scintillement de l'iris
+    if (!reduceMotion) {
+      const iris = $('[data-iris]');
+      let t = 0;
+      const breathe = () => {
+        t += 0.016;
+        const pupil = $('[data-pupil]');
+        if (pupil) pupil.setAttribute('r', (56 + Math.sin(t) * 3).toFixed(1));
+        requestAnimationFrame(breathe);
+      };
+      requestAnimationFrame(breathe);
     }
   }
 
-  // ---------- Header scroll state ----------
-  const header = document.querySelector('[data-header]');
-  const onScroll = () => {
-    if (header) header.classList.toggle('is-scrolled', window.scrollY > 16);
-  };
-  window.addEventListener('scroll', onScroll, { passive: true });
-  onScroll();
+  /* ---------- INTRO : l'œil qui s'ouvre puis nous avale ---------- */
+  const intro = $('[data-intro]');
+  const stage = $('[data-intro-stage]');
+  const irisG = $('[data-iris]');
 
-  // ---------- Mobile nav toggle ----------
-  const navToggle = document.querySelector('[data-nav-toggle]');
-  const mobileNav = document.getElementById('mobile-nav');
-  if (navToggle && mobileNav) {
-    const setOpen = (open) => {
-      navToggle.setAttribute('aria-expanded', String(open));
-      navToggle.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
-      mobileNav.hidden = !open;
+  const revealSite = () => {
+    document.body.classList.remove('is-loading', 'intro-active');
+    document.body.classList.add('intro-done');
+  };
+
+  if (!intro || reduceMotion) {
+    revealSite();
+    if (intro) intro.remove();
+  } else {
+    document.body.classList.add('intro-active');
+    let entered = false;
+
+    // l'iris suit légèrement le curseur pendant l'intro
+    const trackIris = (e) => {
+      if (!irisG || entered) return;
+      const dx = (e.clientX / window.innerWidth  - 0.5) * 46;
+      const dy = (e.clientY / window.innerHeight - 0.5) * 30;
+      irisG.style.transform = `translate(${dx.toFixed(1)}px, ${dy.toFixed(1)}px)`;
     };
-    navToggle.addEventListener('click', () => {
-      setOpen(navToggle.getAttribute('aria-expanded') !== 'true');
+
+    const enterEye = () => {
+      if (entered) return;
+      entered = true;
+      if (irisG) irisG.style.transform = 'translate(0,0)';
+      intro.classList.add('is-entering');
+      window.removeEventListener('pointermove', trackIris);
+      setTimeout(() => {
+        intro.classList.add('is-done');
+        revealSite();
+        setTimeout(() => intro.remove(), 700);
+      }, 1150);
+    };
+
+    // séquence : ouverture -> regard -> entrée auto
+    const open = () => {
+      intro.classList.add('is-open');
+      if (finePointer) {
+        irisG && (irisG.style.transition = 'transform .25s ease');
+        window.addEventListener('pointermove', trackIris);
+      }
+      // entrée automatique si l'utilisateur ne clique pas
+      window.__introTimer = setTimeout(enterEye, 3600);
+    };
+
+    if (document.readyState === 'complete') setTimeout(open, 450);
+    else window.addEventListener('load', () => setTimeout(open, 450));
+    setTimeout(() => { if (!intro.classList.contains('is-open')) open(); }, 1600); // garde-fou
+
+    // clic/skip => on plonge dans l'œil
+    $('[data-skip]')?.addEventListener('click', () => { clearTimeout(window.__introTimer); enterEye(); });
+    stage?.addEventListener('click', (e) => {
+      if (e.target.closest('[data-skip]')) return;
+      if (!intro.classList.contains('is-open')) return;
+      clearTimeout(window.__introTimer); enterEye();
     });
-    mobileNav.querySelectorAll('a').forEach(a => a.addEventListener('click', () => setOpen(false)));
   }
 
-  // ---------- Custom cursor ----------
-  const cursor = document.querySelector('[data-cursor]');
-  if (cursor && isFinePointer && !reduceMotion) {
-    const dot = cursor.querySelector('.cursor-dot');
-    const ring = cursor.querySelector('.cursor-ring');
-    let mx = window.innerWidth / 2, my = window.innerHeight / 2;
-    let dx = mx, dy = my, rx = mx, ry = my;
-
-    window.addEventListener('mousemove', (e) => {
-      mx = e.clientX; my = e.clientY;
-    }, { passive: true });
-
-    const tick = () => {
-      dx += (mx - dx) * 0.55;
-      dy += (my - dy) * 0.55;
-      rx += (mx - rx) * 0.18;
-      ry += (my - ry) * 0.18;
-      if (dot)  dot.style.transform  = `translate(${dx}px, ${dy}px) translate(-50%, -50%)`;
-      if (ring) ring.style.transform = `translate(${rx}px, ${ry}px) translate(-50%, -50%)`;
-      requestAnimationFrame(tick);
+  /* ---------- Curseur personnalisé ---------- */
+  const cursor = $('[data-cursor]');
+  if (cursor && finePointer) {
+    let cx = window.innerWidth / 2, cy = window.innerHeight / 2;
+    let tx = cx, ty = cy;
+    window.addEventListener('pointermove', (e) => { tx = e.clientX; ty = e.clientY; }, { passive: true });
+    const loop = () => {
+      cx += (tx - cx) * 0.18; cy += (ty - cy) * 0.18;
+      cursor.style.transform = `translate(${cx}px, ${cy}px)`;
+      requestAnimationFrame(loop);
     };
-    requestAnimationFrame(tick);
-
-    document.addEventListener('mousedown', () => cursor.classList.add('is-down'));
-    document.addEventListener('mouseup',   () => cursor.classList.remove('is-down'));
-    document.addEventListener('mouseleave', () => cursor.style.opacity = '0');
-    document.addEventListener('mouseenter', () => cursor.style.opacity = '1');
-
-    const hoverTargets = document.querySelectorAll(
-      '[data-cursor-target], a, button, input, [role="button"]'
-    );
-    hoverTargets.forEach(el => {
-      el.addEventListener('mouseenter', () => cursor.classList.add('is-hover'));
-      el.addEventListener('mouseleave', () => cursor.classList.remove('is-hover'));
+    requestAnimationFrame(loop);
+    const hoverables = 'a, button, [data-magnetic], [data-tilt], .work, .artist, .service';
+    document.addEventListener('pointerover', (e) => {
+      if (e.target.closest(hoverables)) cursor.classList.add('is-hover');
+    });
+    document.addEventListener('pointerout', (e) => {
+      if (e.target.closest(hoverables)) cursor.classList.remove('is-hover');
     });
   } else if (cursor) {
     cursor.remove();
   }
 
-  // ---------- Hero parallax ----------
-  const parallaxEls = document.querySelectorAll('[data-parallax]');
-  if (parallaxEls.length && !reduceMotion) {
-    let tx = 0, ty = 0, cx = 0, cy = 0;
-    let scrollY = window.scrollY;
+  /* ---------- En-tête : état au scroll ---------- */
+  const header = $('[data-header]');
+  const onScroll = () => header && header.classList.toggle('is-scrolled', window.scrollY > 20);
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
 
-    window.addEventListener('mousemove', (e) => {
-      tx = (e.clientX / window.innerWidth - 0.5);
-      ty = (e.clientY / window.innerHeight - 0.5);
-    }, { passive: true });
+  /* ---------- Menu mobile ---------- */
+  const burger = $('[data-burger]');
+  const closeMenu = () => { document.body.classList.remove('menu-open'); burger?.setAttribute('aria-expanded', 'false'); };
+  burger?.addEventListener('click', () => {
+    const open = document.body.classList.toggle('menu-open');
+    burger.setAttribute('aria-expanded', String(open));
+  });
+  $$('[data-menu-link]').forEach((a) => a.addEventListener('click', closeMenu));
 
-    window.addEventListener('scroll', () => {
-      scrollY = window.scrollY;
-    }, { passive: true });
-
-    const tick = () => {
-      cx += (tx - cx) * 0.08;
-      cy += (ty - cy) * 0.08;
-      parallaxEls.forEach(el => {
-        const depth = parseFloat(el.dataset.parallax) || 0.04;
-        const sx = cx * 100 * depth;
-        const sy = cy * 100 * depth + scrollY * depth * 0.4;
-        el.style.transform = `translate3d(${sx}px, ${sy}px, 0)`;
-      });
-      requestAnimationFrame(tick);
-    };
-    requestAnimationFrame(tick);
-  }
-
-  // ---------- Reveal on scroll ----------
-  const reveals = document.querySelectorAll(
-    '.section-head, .creed li, .card, .look, .entry, .col-body > h2, .col-body > p, .contact-note'
-  );
-  reveals.forEach(el => el.classList.add('reveal'));
-
-  if ('IntersectionObserver' in window) {
+  /* ---------- Révélation au scroll ---------- */
+  const reveals = $$('.reveal');
+  if ('IntersectionObserver' in window && !reduceMotion) {
     const io = new IntersectionObserver((entries) => {
-      entries.forEach((entry, i) => {
-        if (entry.isIntersecting) {
-          setTimeout(() => entry.target.classList.add('is-visible'), i * 50);
-          io.unobserve(entry.target);
-        }
+      entries.forEach((en) => {
+        if (en.isIntersecting) { en.target.classList.add('is-in'); io.unobserve(en.target); }
       });
-    }, { rootMargin: '0px 0px -10% 0px', threshold: 0.05 });
-    reveals.forEach(el => io.observe(el));
+    }, { threshold: 0.14, rootMargin: '0px 0px -8% 0px' });
+    reveals.forEach((el) => io.observe(el));
   } else {
-    reveals.forEach(el => el.classList.add('is-visible'));
+    reveals.forEach((el) => el.classList.add('is-in'));
   }
 
-  // ---------- Newsletter signup ----------
-  const signup = document.querySelector('[data-signup]');
-  if (signup) {
-    signup.addEventListener('submit', (e) => {
-      e.preventDefault();
-      const input = signup.querySelector('input');
-      const msg   = signup.querySelector('.signup-msg');
-      const btn   = signup.querySelector('button');
-      if (!input.value || !input.checkValidity()) {
-        input.focus();
-        return;
-      }
-      msg.hidden = false;
-      btn.disabled = true;
-      input.disabled = true;
+  /* ---------- Nav active selon la section ---------- */
+  const links = $$('[data-link]');
+  const sections = links.map((l) => $(l.getAttribute('href'))).filter(Boolean);
+  if ('IntersectionObserver' in window && sections.length) {
+    const spy = new IntersectionObserver((entries) => {
+      entries.forEach((en) => {
+        if (!en.isIntersecting) return;
+        const id = '#' + en.target.id;
+        links.forEach((l) => l.classList.toggle('is-active', l.getAttribute('href') === id));
+      });
+    }, { threshold: 0.4, rootMargin: '-30% 0px -50% 0px' });
+    sections.forEach((s) => spy.observe(s));
+  }
+
+  /* ---------- Compteurs ---------- */
+  const counters = $$('[data-count]');
+  if ('IntersectionObserver' in window && !reduceMotion) {
+    const cio = new IntersectionObserver((entries) => {
+      entries.forEach((en) => {
+        if (!en.isIntersecting) return;
+        const el = en.target;
+        const target = parseInt(el.dataset.count, 10);
+        const dur = 1400; const start = performance.now();
+        const tick = (now) => {
+          const p = Math.min((now - start) / dur, 1);
+          const eased = 1 - Math.pow(1 - p, 3);
+          el.textContent = Math.round(target * eased);
+          if (p < 1) requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+        cio.unobserve(el);
+      });
+    }, { threshold: 0.6 });
+    counters.forEach((el) => cio.observe(el));
+  }
+
+  /* ---------- Œil vivant (section studio) ---------- */
+  const watcherEye = $('[data-watcher-eye]');
+  const watcher = $('[data-watcher]');
+  if (watcherEye && watcher && finePointer) {
+    window.addEventListener('pointermove', (e) => {
+      const r = watcher.getBoundingClientRect();
+      const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+      const dx = e.clientX - cx, dy = e.clientY - cy;
+      const ang = Math.atan2(dy, dx);
+      const dist = Math.min(Math.hypot(dx, dy) / 28, 30);
+      watcherEye.style.transform = `translate(${(Math.cos(ang) * dist).toFixed(1)}px, ${(Math.sin(ang) * dist).toFixed(1)}px)`;
+    }, { passive: true });
+  }
+
+  /* ---------- Boutons magnétiques ---------- */
+  if (finePointer && !reduceMotion) {
+    $$('[data-magnetic]').forEach((el) => {
+      el.addEventListener('pointermove', (e) => {
+        const r = el.getBoundingClientRect();
+        const x = e.clientX - r.left - r.width / 2;
+        const y = e.clientY - r.top - r.height / 2;
+        el.style.transform = `translate(${x * 0.25}px, ${y * 0.3}px)`;
+      });
+      el.addEventListener('pointerleave', () => { el.style.transform = ''; });
     });
   }
 
-  // ==============================================================
-  // Cart (the Coffin)
-  // ==============================================================
-  const STORAGE_KEY = 'vespertine.coffin.v1';
-  const cartEl       = document.querySelector('[data-cart]');
-  const cartToggleEl = document.querySelector('[data-cart-toggle]');
-  const cartCountEl  = document.querySelector('[data-cart-count]');
-  const cartItemsEl  = document.querySelector('[data-cart-items]');
-  const cartTotalEl  = document.querySelector('[data-cart-total]');
-  const cartCloseEls = document.querySelectorAll('[data-cart-close]');
-
-  /** @type {Array<{id:string,name:string,price:number,qty:number}>} */
-  let cart = [];
-
-  const loadCart = () => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      cart = raw ? JSON.parse(raw) : [];
-      if (!Array.isArray(cart)) cart = [];
-    } catch { cart = []; }
-  };
-  const saveCart = () => {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(cart)); } catch {}
-  };
-
-  const fmtEUR = (n) => '€ ' + n.toLocaleString('en-GB');
-
-  const totalQty = () => cart.reduce((s, i) => s + i.qty, 0);
-  const totalPrice = () => cart.reduce((s, i) => s + i.qty * i.price, 0);
-
-  const renderCart = () => {
-    if (!cartItemsEl) return;
-    if (!cart.length) {
-      cartItemsEl.innerHTML = '<p class="cart-empty">Your coffin lies empty.<br/><em>Choose a garment from the vigil.</em></p>';
-    } else {
-      cartItemsEl.innerHTML = cart.map(item => `
-        <div class="cart-item" data-id="${item.id}">
-          <div>
-            <h4>${item.name}</h4>
-            <p class="ci-meta">Edition of forty</p>
-          </div>
-          <p class="ci-price">${fmtEUR(item.price * item.qty)}</p>
-          <div class="ci-controls">
-            <div class="qty" role="group" aria-label="Quantity for ${item.name}">
-              <button type="button" data-qty="-1" aria-label="Decrease quantity">&minus;</button>
-              <span>${item.qty}</span>
-              <button type="button" data-qty="+1" aria-label="Increase quantity">+</button>
-            </div>
-            <button type="button" class="ci-remove" data-remove>Remove</button>
-          </div>
-        </div>
-      `).join('');
-    }
-    if (cartTotalEl) cartTotalEl.textContent = fmtEUR(totalPrice());
-    if (cartCountEl) cartCountEl.textContent = String(totalQty());
-    if (cartToggleEl) {
-      cartToggleEl.classList.toggle('has-items', totalQty() > 0);
-      cartToggleEl.setAttribute('aria-label', `Open coffin (${totalQty()} item${totalQty() === 1 ? '' : 's'})`);
-    }
-  };
-
-  const addToCart = (product) => {
-    const existing = cart.find(i => i.id === product.id);
-    if (existing) existing.qty += 1;
-    else cart.push({ ...product, qty: 1 });
-    saveCart();
-    renderCart();
-    bumpCart();
-  };
-
-  const updateQty = (id, delta) => {
-    const item = cart.find(i => i.id === id);
-    if (!item) return;
-    item.qty = Math.max(0, item.qty + delta);
-    if (item.qty === 0) cart = cart.filter(i => i.id !== id);
-    saveCart();
-    renderCart();
-  };
-
-  const removeItem = (id) => {
-    cart = cart.filter(i => i.id !== id);
-    saveCart();
-    renderCart();
-  };
-
-  const bumpCart = () => {
-    if (!cartToggleEl) return;
-    cartToggleEl.classList.remove('is-bumped');
-    void cartToggleEl.offsetWidth;
-    cartToggleEl.classList.add('is-bumped');
-  };
-
-  const setCartOpen = (open) => {
-    if (!cartEl) return;
-    cartEl.setAttribute('aria-hidden', String(!open));
-    if (open) cartEl.removeAttribute('hidden');
-    else setTimeout(() => { if (cartEl.getAttribute('aria-hidden') === 'true') cartEl.setAttribute('hidden', ''); }, 600);
-    document.body.classList.toggle('cart-open', open);
-  };
-
-  if (cartToggleEl) cartToggleEl.addEventListener('click', () => {
-    const isOpen = cartEl.getAttribute('aria-hidden') !== 'true';
-    setCartOpen(!isOpen);
-  });
-  cartCloseEls.forEach(el => el.addEventListener('click', () => setCartOpen(false)));
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') setCartOpen(false);
-  });
-
-  document.querySelectorAll('[data-add]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const card = btn.closest('[data-product]');
-      if (!card) return;
-      try {
-        const product = JSON.parse(card.dataset.product);
-        addToCart(product);
-        btn.classList.add('is-added');
-        setTimeout(() => btn.classList.remove('is-added'), 1400);
-      } catch {}
-    });
-  });
-
-  if (cartItemsEl) {
-    cartItemsEl.addEventListener('click', (e) => {
-      const target = e.target.closest('button');
-      if (!target) return;
-      const itemEl = target.closest('.cart-item');
-      if (!itemEl) return;
-      const id = itemEl.dataset.id;
-      if (target.dataset.qty) updateQty(id, parseInt(target.dataset.qty, 10));
-      else if (target.dataset.remove !== undefined || target.classList.contains('ci-remove')) removeItem(id);
-    });
+  /* ---------- Parallaxe légère ---------- */
+  const parallax = $$('[data-parallax]');
+  if (parallax.length && !reduceMotion && finePointer) {
+    let ticking = false;
+    const update = () => {
+      const vh = window.innerHeight;
+      parallax.forEach((el) => {
+        const r = el.getBoundingClientRect();
+        const center = r.top + r.height / 2;
+        const off = (center - vh / 2) / vh;
+        const speed = parseFloat(el.dataset.parallax) || 0;
+        el.style.setProperty('--py', `${(off * speed * 100).toFixed(1)}px`);
+      });
+      ticking = false;
+    };
+    window.addEventListener('scroll', () => {
+      if (!ticking) { requestAnimationFrame(update); ticking = true; }
+    }, { passive: true });
+    update();
   }
 
-  const checkoutBtn = document.querySelector('.cart-checkout');
-  if (checkoutBtn) {
-    checkoutBtn.addEventListener('click', () => {
-      if (!cart.length) return;
-      checkoutBtn.disabled = true;
-      const note = document.querySelector('.cart-note');
-      if (note) {
-        note.innerHTML = '<em>The rite has begun. A messenger is on their way.</em>';
-        note.style.color = 'var(--brass)';
-      }
-      cart = [];
-      saveCart();
-      setTimeout(() => {
-        renderCart();
-        checkoutBtn.disabled = false;
-        if (note) note.textContent = 'Shipped in unmarked muslin with a candle and a wax seal.';
-      }, 2200);
-    });
-  }
-
-  loadCart();
-  renderCart();
+  /* ---------- Année dynamique (déjà 2026 dans le markup) ---------- */
 })();
